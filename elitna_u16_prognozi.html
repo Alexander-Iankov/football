@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Елитна група U16 — Динамично класиране (мобилно)</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --txt:#e5e7eb; --acc:#22d3ee; --picked:#0e1c30; }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--txt);}
+    header{padding:16px;border-bottom:1px solid #1f2937;background:#0b1222;position:sticky;top:0;z-index:10}
+    h1{margin:0;font-size:clamp(18px,2.4vw,22px);letter-spacing:.2px}
+    main{width:100%;margin:0;padding:16px}
+    .grid{
+      display:grid;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      gap:16px;
+      width:100%;
+    }
+    @media (max-width:1024px){ .grid{grid-template-columns:1fr} }
+
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{font-size:16px;margin:0;padding:14px 14px 0 14px}
+    .card .sub{color:var(--muted);font-size:12px;padding:0 14px 8px 14px}
+    .pad{padding:12px 14px 16px}
+
+    /* Таблица */
+    .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table{min-width:720px;width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;table-layout:auto}
+    th,td{padding:10px;border-bottom:1px solid #1f2937;text-align:left;white-space:nowrap}
+    th{font-size:12px;color:#a3b6d6;text-transform:uppercase;letter-spacing:.08em}
+    td.pos{width:36px;text-align:center;color:#a3b6d6}
+    td.team{font-weight:600;white-space:nowrap}
+    td.team a{color:inherit;text-decoration:none;border-bottom:1px dashed #2b3a5d}
+    td.team a:hover{color:var(--acc)}
+    td.right{text-align:right}
+    tr:hover td{background:#0d1426}
+    @media (max-width:600px){ td.team, td, th { white-space:normal } table{min-width:0} }
+
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0b3741;color:#bff6ff;font-size:12px}
+    .row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed #1f2937;transition:background .15s ease}
+    .row:last-child{border-bottom:0}
+    .row.picked{ background: var(--picked) } /* <-- оцветяване при прогноза */
+    .match{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .vs{opacity:.7}
+    .round{margin:10px 0 6px;font-weight:700;color:#b0c4e3}
+    .legend{font-size:12px;color:var(--muted)}
+    .footer{color:#9fb3d1;font-size:12px;padding:10px 14px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    a{color:var(--acc);text-decoration:none}
+    .badge{font-size:12px;border:1px solid #293042;padding:4px 8px;border-radius:999px;color:#cfe1ff;background:#0b3741}
+    .sticky-note{position:sticky;top:72px;align-self:start}
+    .muted{color:var(--muted)}
+
+    /* Радио бутони — по-големи touch области */
+    .radio-group{display:flex;gap:8px;align-items:center}
+    .radio{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:10px 12px; border:1px solid #243048;border-radius:12px;cursor:pointer;
+      user-select:none;font-size:16px;line-height:1.1
+    }
+    .radio input{ width:20px;height:20px;accent-color:#22d3ee; }
+
+    .totals{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 0}
+    .totals .chip{font-size:12px;color:#c4d3f1;background:#0b3741;border:1px solid #1f2937;border-radius:999px;padding:4px 8px}
+    .team-list{display:flex;flex-direction:column;gap:8px}
+    .hint{font-size:12px;color:#9fb3d1}
+    .btn{ background:#0b1222;color:#e5e7eb;border:1px solid #1f2937;border-radius:10px;padding:10px 14px;cursor:pointer;font-size:14px }
+    .btn:hover{border-color:#334155}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:6px 0 10px}
+
+    /* Аккордеони */
+    details{border-top:1px solid #1f2937;border-bottom:1px solid #1f2937;border-radius:12px;overflow:hidden}
+    summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600}
+    summary::-webkit-details-marker{display:none}
+    details .pad{padding-top:0}
+
+    /* Плаващ бутон за „Изчисти всички“ на мобилно */
+    #fab-clear{
+      position:fixed;right:16px;bottom:16px;z-index:20;display:none;
+      background:#0b1222;color:#e5e7eb;border:1px solid #1f2937;border-radius:999px;
+      padding:12px 16px;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35)
+    }
+    @media (max-width:900px){ #fab-clear{display:block} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Елитна група (U-16) 2025/26 — динамично класиране (след XII кръг)</h1>
+  </header>
+
+  <main class="grid">
+    <!-- Класиране -->
+    <section class="card">
+      <h2>Класиране</h2>
+      <div class="sub">Щракни име на отбор, за да видиш мачовете му вдясно. Променяй прогнозите, за да се преизчислява таблицата.</div>
+      <div class="pad">
+        <div class="table-wrap">
+          <table id="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Отбор</th>
+                <th class="right">Точки сега</th>
+                <th class="right">+ от прогнози</th>
+                <th class="right">Очаквани точки</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="footer">
+          <span id="progress" class="badge">0/0</span>
+          <span id="pending" class="badge">Непопълнени: 0</span>
+          <span class="legend">Легенда: 1 = домакин печели (3 т.), Х = равен (1 т. за двата), 2 = гост печели (3 т.).</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Оставащи мачове (акордеон) -->
+    <section class="card sticky-note">
+      <details id="fixtures-acc" open>
+        <summary>Оставащи мачове</summary>
+        <div class="sub">Избери резултат за всяка среща (1 / Х / 2)</div>
+        <div class="pad">
+          <div class="toolbar">
+            <span class="hint">Промените се отразяват веднага.</span>
+            <button class="btn" id="clear-all">Изчисти всички прогнози</button>
+          </div>
+          <div id="fixtures"></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Фокус: Отбор (акордеон) -->
+    <section class="card sticky-note">
+      <details id="focus-acc">
+        <summary>Фокус: <span id="focus-name">—</span></summary>
+        <div class="sub" id="focus-sub">Щракни върху отбор от таблицата, за да видиш и редактираш оставащите му срещи.</div>
+        <div class="pad" id="focus">
+          <div class="hint">Няма избран отбор.</div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <!-- Плаващ бутон на мобилни -->
+  <button id="fab-clear" title="Изчисти всички прогнози">Изчисти всички</button>
+
+  <script>
+    // --- Данни ---
+    const basePoints = {
+      "Лудогорец 1945 (Разград)": 34,
+      "Академик (Пловдив)": 29,
+      "Левски (София)": 28,
+      "Локомотив 1926 (Пловдив)": 23,
+      "Септември (София)": 22,
+      "Етър ВТ (Велико Търново)": 19,
+      "Национал (София)": 18,
+      "Славия 1913 (София)": 16,
+      "Ботев (Пловдив)": 14,
+      "Пирин 22 (Благоевград)": 14,
+      "ЦСКА (София)": 14,
+      "Черно море (Варна)": 13,
+      "Дунав от Русе (Русе)": 8,
+      "Ботев (Враца)": 7,
+      "Пловдив 2015 (Пловдив)": 7,
+      "Арда 1924 (Кърджали)": 4
+    };
+    const seedOrder = Object.keys(basePoints);
+
+    const fixtures = [
+      // XIII
+      {round: "XIII", home: "Славия 1913 (София)", away: "Септември (София)"},
+      {round: "XIII", home: "Арда 1924 (Кърджали)", away: "Лудогорец 1945 (Разград)"},
+      {round: "XIII", home: "ЦСКА (София)", away: "Ботев (Враца)"},
+      {round: "XIII", home: "Академик (Пловдив)", away: "Ботев (Пловдив)"},
+      {round: "XIII", home: "Етър ВТ (Велико Търново)", away: "Локомотив 1926 (Пловдив)"},
+      {round: "XIII", home: "Черно море (Варна)", away: "Национал (София)"},
+      {round: "XIII", home: "Пирин 22 (Благоевград)", away: "Пловдив 2015 (Пловдив)"},
+      {round: "XIII", home: "Левски (София)", away: "Дунав от Русе (Русе)"},
+      // XIV
+      {round: "XIV", home: "Национал (София)", away: "Септември (София)"},
+      {round: "XIV", home: "Лудогорец 1945 (Разград)", away: "Славия 1913 (София)"},
+      {round: "XIV", home: "Ботев (Пловдив)", away: "Арда 1924 (Кърджали)"},
+      {round: "XIV", home: "Ботев (Враца)", away: "Академик (Пловдив)"},
+      {round: "XIV", home: "Дунав от Русе (Русе)", away: "ЦСКА (София)"},
+      {round: "XIV", home: "Пловдив 2015 (Пловдив)", away: "Левски (София)"},
+      {round: "XIV", home: "Локомотив 1926 (Пловдив)", away: "Пирин 22 (Благоевград)"},
+      {round: "XIV", home: "Черно море (Варна)", away: "Етър ВТ (Велико Търново)"},
+      // XV
+      {round: "XV", home: "Етър ВТ (Велико Търново)", away: "Национал (София)"},
+      {round: "XV", home: "Пирин 22 (Благоевград)", away: "Черно море (Варна)"},
+      {round: "XV", home: "Левски (София)", away: "Локомотив 1926 (Пловдив)"},
+      {round: "XV", home: "ЦСКА (София)", away: "Пловдив 2015 (Пловдив)"},
+      {round: "XV", home: "Академик (Пловдив)", away: "Дунав от Русе (Русе)"},
+      {round: "XV", home: "Арда 1924 (Кърджали)", away: "Ботев (Враца)"},
+      {round: "XV", home: "Славия 1913 (София)", away: "Ботев (Пловдив)"},
+      {round: "XV", home: "Септември (София)", away: "Лудогорец 1945 (Разград)"}
+    ];
+
+    const picks = Array(fixtures.length).fill("");
+    let focusedTeam = null;
+
+    // --- Утилити
+    function computeAddedPoints(){
+      const add = {};
+      for (const t of Object.keys(basePoints)) add[t]=0;
+      fixtures.forEach((m,idx)=>{
+        const pick = picks[idx];
+        if (!pick) return;
+        if (pick==="1"){ add[m.home]+=3; }
+        else if (pick==="2"){ add[m.away]+=3; }
+        else if (pick==="X"){ add[m.home]+=1; add[m.away]+=1; }
+      });
+      return add;
+    }
+    function sortTeams(total){
+      return Object.keys(total).sort((a,b)=>{
+        if (total[b]!==total[a]) return total[b]-total[a];
+        return seedOrder.indexOf(a)-seedOrder.indexOf(b);
+      });
+    }
+
+    // --- Прогрес 13/24 + оцветяване на редове
+    function updateProgressAndHighlights(){
+      const done = picks.filter(Boolean).length;
+      const all = fixtures.length;
+      document.getElementById('progress').textContent = `${done}/${all}`;
+      document.getElementById('pending').textContent = `Непопълнени: ${all - done}`;
+
+      // централна колона — маркиране на избраните
+      fixtures.forEach((_, i)=>{
+        document.querySelectorAll(`[data-row="m${i}"]`).forEach(row=>{
+          row.classList.toggle('picked', !!picks[i]);
+        });
+      });
+      // панел "Фокус" — маркиране
+      fixtures.forEach((_, i)=>{
+        document.querySelectorAll(`[data-row="f${i}"]`).forEach(row=>{
+          row.classList.toggle('picked', !!picks[i]);
+        });
+      });
+    }
+
+    function setPrediction(matchIndex, value){
+      picks[matchIndex] = value;
+      document.querySelectorAll(`input[name="m${matchIndex}"]`).forEach(r=>{ r.checked = (r.value === value); });
+      document.querySelectorAll(`input[name="f${matchIndex}"]`).forEach(r=>{ r.checked = (r.value === value); });
+      updateTable();
+      updateProgressAndHighlights();
+    }
+    function clearAllPredictions(){
+      for (let i=0;i<picks.length;i++) picks[i]="";
+      document.querySelectorAll('input[type="radio"]').forEach(r=>{ r.checked=false; });
+      updateTable();
+      updateProgressAndHighlights();
+    }
+
+    // --- Класиране
+    function updateTable(){
+      const add = computeAddedPoints();
+      const total = {};
+      for (const t of Object.keys(basePoints)) total[t]=basePoints[t]+add[t];
+      const order = sortTeams(total);
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = "";
+
+      order.forEach((team,pos)=>{
+        const tr = document.createElement('tr');
+        const teamCell = `<td class="team"><a href="#" data-team="${team}">${team}</a></td>`;
+        tr.innerHTML = `
+          <td class="pos">${pos+1}</td>
+          ${teamCell}
+          <td class="right">${basePoints[team]}</td>
+          <td class="right ${add[team] ? '' : 'muted'}">+${add[team]}</td>
+          <td class="right"><strong>${total[team]}</strong></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('a[data-team]').forEach(a=>{
+        a.addEventListener('click', (e)=>{
+          e.preventDefault();
+          focusedTeam = a.dataset.team;
+          document.getElementById('focus-acc').open = true;
+          renderFocusPanel();
+          if (window.innerWidth <= 1024) {
+            document.getElementById('focus-acc').scrollIntoView({behavior:'smooth', block:'start'});
+          }
+        });
+      });
+
+      // обнови прогрес и фокуса
+      updateProgressAndHighlights();
+      if (focusedTeam) renderFocusPanel();
+    }
+
+    // --- Оставащи мачове (централна колона)
+    function renderFixtures(){
+      const wrap = document.getElementById('fixtures');
+      wrap.innerHTML = "";
+      let currentRound = "";
+      fixtures.forEach((m,i)=>{
+        if (m.round !== currentRound){
+          currentRound = m.round;
+          const h = document.createElement('div');
+          h.className = 'round';
+          h.textContent = `${m.round} кръг`;
+          wrap.appendChild(h);
+        }
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.setAttribute('data-row', `m${i}`); // <-- за оцветяване
+
+        const left = document.createElement('div');
+        left.className = 'match';
+        left.innerHTML = `
+          <span class="pill">${m.round}</span>
+          <span>${m.home}</span>
+          <span class="vs">—</span>
+          <span>${m.away}</span>
+        `;
+
+        const right = document.createElement('div');
+        right.className = 'radio-group';
+        ["1","X","2"].forEach(val=>{
+          const id = `m${i}-${val}`;
+          const label = document.createElement('label');
+          label.className = 'radio';
+          label.setAttribute('for', id);
+          label.innerHTML = `<input type="radio" name="m${i}" id="${id}" value="${val}" ${picks[i]===val ? 'checked':''}>
+                             <span>${val}</span>`;
+          label.querySelector('input').addEventListener('change', e=>{
+            setPrediction(i, e.target.value);
+          });
+          right.appendChild(label);
+        });
+
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = "Изчисти";
+        clearBtn.className = 'btn';
+        clearBtn.style.marginLeft = '6px';
+        clearBtn.addEventListener('click', ()=> setPrediction(i, "") );
+        right.appendChild(clearBtn);
+
+        row.appendChild(left);
+        row.appendChild(right);
+        wrap.appendChild(row);
+      });
+
+      document.getElementById('clear-all').addEventListener('click', clearAllPredictions);
+      document.getElementById('fab-clear').addEventListener('click', clearAllPredictions);
+    }
+
+    // --- Панел "Фокус: Отбор"
+    function renderFocusPanel(){
+  const box = document.getElementById('focus');
+  const nameEl = document.getElementById('focus-name');
+  const subEl = document.getElementById('focus-sub');
+
+  if (!focusedTeam){
+    nameEl.textContent = "—";
+    subEl.textContent = "Щракни върху отбор от таблицата, за да видиш и редактираш оставащите му срещи.";
+    box.innerHTML = `<div class="hint">Няма избран отбор.</div>`;
+    return;
+  }
+
+  nameEl.textContent = focusedTeam;
+  subEl.textContent = "Оставащи двубои и точки; можеш да променяш прогнозите директно тук.";
+
+  const teamFixtures = fixtures
+    .map((m, idx)=>({...m, idx}))
+    .filter(m=> m.home===focusedTeam || m.away===focusedTeam);
+
+  let sum = 0;
+  const list = document.createElement('div');
+  list.className = 'team-list';
+
+  teamFixtures.forEach(m=>{
+    const pick = picks[m.idx];
+
+    // точки според избора: 1 = победа за home, 2 = победа за away, X = по 1 точка
+    let pts = 0;
+    if (pick==="1"){ pts = (m.home===focusedTeam) ? 3 : 0; }
+    else if (pick==="2"){ pts = (m.away===focusedTeam) ? 3 : 0; }
+    else if (pick==="X"){ pts = 1; }
+    sum += pts;
+
+    const isHome = (m.home===focusedTeam);
+    const homeBadge = isHome ? ' <span class="muted">(Д)</span>' : '';
+    const awayBadge = (!isHome) ? ' <span class="muted">(Г)</span>' : '';
+
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.setAttribute('data-row', `f${m.idx}`); // за оцветяване според прогнозата
+
+    // ВИНАГИ показваме home — away в оригиналния ред
+    const left = document.createElement('div');
+    left.className = 'match';
+    left.innerHTML = `
+      <span class="pill">${m.round}</span>
+      <span>${m.home}${m.home===focusedTeam ? homeBadge : ""}</span>
+      <span class="vs">—</span>
+      <span>${m.away}${m.away===focusedTeam ? awayBadge : ""}</span>
+    `;
+
+    const right = document.createElement('div');
+    right.className = 'radio-group';
+    ["1","X","2"].forEach(val=>{
+      const id = `f${m.idx}-${val}`;
+      const label = document.createElement('label');
+      label.className = 'radio';
+      label.setAttribute('for', id);
+      label.innerHTML = `<input type="radio" name="f${m.idx}" id="${id}" value="${val}" ${picks[m.idx]===val ? 'checked':''}>
+                         <span>${val}</span>`;
+      label.querySelector('input').addEventListener('change', e=>{
+        setPrediction(m.idx, e.target.value);
+      });
+      right.appendChild(label);
+    });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = "Изчисти";
+    clearBtn.className = 'btn';
+    clearBtn.style.marginLeft = '6px';
+    clearBtn.addEventListener('click', ()=> setPrediction(m.idx, "") );
+    right.appendChild(clearBtn);
+
+    row.appendChild(left);
+    row.appendChild(right);
+
+    const totals = document.createElement('div');
+    totals.className = 'totals';
+    totals.innerHTML = `
+      <span class="chip">избор: ${pick || "—"}</span>
+      <span class="chip">точки: ${pts}</span>
+      <a class="chip" href="#m${m.idx}-1" onclick="scrollToMatch(${m.idx})">към мача</a>
+    `;
+
+    list.appendChild(row);
+    list.appendChild(totals);
+  });
+
+  box.innerHTML = "";
+  box.appendChild(list);
+
+  const footer = document.createElement('div');
+  footer.className = 'totals';
+  footer.style.marginTop = '12px';
+  footer.innerHTML = `
+    <span class="chip"><strong>Потенциални точки от прогнози: ${sum}</strong></span>
+    <span class="chip">Точки сега: ${basePoints[focusedTeam]}</span>
+    <span class="chip">Очаквани: ${basePoints[focusedTeam] + sum}</span>
+  `;
+  box.appendChild(footer);
+
+  // синхронизирай оцветяването в панела
+  updateProgressAndHighlights();
+}
+
+    function scrollToMatch(i){
+      const el = document.getElementById(`m${i}-1`);
+      if (el){
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        setTimeout(()=>{ el.focus(); }, 300);
+      }
+    }
+
+    // --- Инициализация
+    renderFixtures();
+    updateTable();
+    updateProgressAndHighlights();
+
+    if (window.innerWidth <= 1024){
+      document.getElementById('focus-acc').open = false;
+      document.getElementById('fixtures-acc').open = true;
+    }
+  </script>
+</body>
+</html>
